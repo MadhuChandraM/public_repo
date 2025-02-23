@@ -3,56 +3,123 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Body Movement and Breath Detection</title>
+  <title>Breath and Body Movement Detection</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
   <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
     body {
-      font-family: Arial, sans-serif;
+      font-family: 'Poppins', sans-serif;
+      background-color: #f0f0f0;
+      color: #333;
       text-align: center;
-      background-color: #f4f4f9;
+      padding: 30px;
     }
+
+    h1 {
+      color: #333;
+      font-size: 36px;
+      margin-bottom: 20px;
+    }
+
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+      background: #fff;
+      border-radius: 15px;
+      padding: 40px;
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+    }
+
     #video {
-      border: 2px solid black;
-      margin-top: 20px;
+      width: 100%;
+      height: auto;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
     }
+
     canvas {
       position: absolute;
       top: 0;
       left: 0;
-      z-index: 1;
+      z-index: 2;
+      border-radius: 8px;
     }
-    .info {
+
+    .status {
+      margin-top: 20px;
+      font-size: 20px;
+      font-weight: 600;
+    }
+
+    #breathStatus {
+      color: #ff6347;
+    }
+
+    .breath-container {
+      display: flex;
+      justify-content: center;
+      align-items: center;
       margin-top: 20px;
     }
-    #breathStatus {
-      font-size: 20px;
-      color: green;
+
+    .breath-indicator {
+      width: 50px;
+      height: 50px;
+      background-color: #ddd;
+      border-radius: 50%;
+      margin: 0 10px;
+      transition: all 0.3s ease;
+    }
+
+    .breathing {
+      background-color: #32CD32;
+      transform: scale(1.2);
+    }
+
+    footer {
+      margin-top: 30px;
+      font-size: 16px;
+      color: #777;
     }
   </style>
 </head>
 <body>
 
-  <h1>Body Movement and Breath Detection</h1>
-  <p>Allow access to your webcam and microphone to detect body movements and breathing.</p>
+  <div class="container">
+    <h1>Breath and Body Movement Detection</h1>
+    <p>Allow access to your webcam and microphone to detect body movements and breathing patterns.</p>
+    
+    <!-- Webcam Video -->
+    <video id="video" autoplay></video>
 
-  <!-- Webcam Video -->
-  <video id="video" width="640" height="480" autoplay></video>
+    <!-- Canvas for body movement visualization -->
+    <canvas id="canvas"></canvas>
 
-  <!-- Canvas for body movement visualization -->
-  <canvas id="canvas" width="640" height="480"></canvas>
+    <!-- Breath Detection -->
+    <div class="status">
+      <h3>Breathing Status: <span id="breathStatus">Not Detected</span></h3>
+    </div>
 
-  <!-- Breath status -->
-  <div class="info">
-    <h3>Breathing Status:</h3>
-    <p id="breathStatus">Breath detected: No</p>
+    <div class="breath-container">
+      <div class="breath-indicator" id="breathIndicator"></div>
+    </div>
   </div>
 
-  <!-- Add TensorFlow.js and PoseNet models -->
+  <footer>
+    <p>Made with 💻 & ❤️ by Your Name</p>
+  </footer>
+
+  <!-- Include TensorFlow.js and PoseNet -->
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/posenet"></script>
 
-  <!-- Web Audio API to detect breath -->
   <script>
-    // Setup for webcam
+    // Setup webcam
     async function setupCamera() {
       const video = document.getElementById('video');
       const stream = await navigator.mediaDevices.getUserMedia({ video: true });
@@ -62,7 +129,7 @@
       });
     }
 
-    // Setup PoseNet model for body movement detection
+    // Load PoseNet for body movement detection
     async function loadPoseNet() {
       const net = await posenet.load();
       return net;
@@ -101,11 +168,8 @@
       requestAnimationFrame(() => detectPose(net));
     }
 
-    // Detect the breath using Web Audio API
-    let audioContext;
-    let analyser;
-    let bufferLength;
-    let dataArray;
+    // Setup breath detection using Web Audio API
+    let audioContext, analyser, bufferLength, dataArray;
     let breathDetected = false;
 
     async function setupBreathDetection() {
@@ -132,14 +196,16 @@
         if (average > 40) {
           if (!breathDetected) {
             breathDetected = true;
-            document.getElementById('breathStatus').textContent = "Breath detected: Yes";
+            document.getElementById('breathStatus').textContent = "Breathing Detected";
             document.getElementById('breathStatus').style.color = "green";
+            document.getElementById('breathIndicator').classList.add('breathing');
           }
         } else {
           if (breathDetected) {
             breathDetected = false;
-            document.getElementById('breathStatus').textContent = "Breath detected: No";
+            document.getElementById('breathStatus').textContent = "Breathing Not Detected";
             document.getElementById('breathStatus').style.color = "red";
+            document.getElementById('breathIndicator').classList.remove('breathing');
           }
         }
         
@@ -149,7 +215,7 @@
       detectVolume();
     }
 
-    // Initialize camera, pose detection, and breath detection
+    // Initialize everything
     async function init() {
       const video = await setupCamera();
       const net = await loadPoseNet();
