@@ -3,9 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Body Movement Detection</title>
+  <title>Body Movement and Breath Detection</title>
   <style>
-    /* Basic styling */
     body {
       font-family: Arial, sans-serif;
       text-align: center;
@@ -21,19 +20,39 @@
       left: 0;
       z-index: 1;
     }
+    .info {
+      margin-top: 20px;
+    }
+    #breathStatus {
+      font-size: 20px;
+      color: green;
+    }
   </style>
 </head>
 <body>
 
-  <h1>Body Movement Detection using Webcam</h1>
-  <p>Allow access to your webcam for detecting body movements.</p>
+  <h1>Body Movement and Breath Detection</h1>
+  <p>Allow access to your webcam and microphone to detect body movements and breathing.</p>
+
+  <!-- Webcam Video -->
   <video id="video" width="640" height="480" autoplay></video>
+
+  <!-- Canvas for body movement visualization -->
   <canvas id="canvas" width="640" height="480"></canvas>
 
+  <!-- Breath status -->
+  <div class="info">
+    <h3>Breathing Status:</h3>
+    <p id="breathStatus">Breath detected: No</p>
+  </div>
+
+  <!-- Add TensorFlow.js and PoseNet models -->
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/posenet"></script>
 
+  <!-- Web Audio API to detect breath -->
   <script>
+    // Setup for webcam
     async function setupCamera() {
       const video = document.getElementById('video');
       const stream = await navigator.mediaDevices.getUserMedia({ video: true });
@@ -43,22 +62,22 @@
       });
     }
 
+    // Setup PoseNet model for body movement detection
     async function loadPoseNet() {
       const net = await posenet.load();
       return net;
     }
 
+    // Detect poses (body movement)
     async function detectPose(net) {
       const video = document.getElementById('video');
       const canvas = document.getElementById('canvas');
       const ctx = canvas.getContext('2d');
 
-      const pose = await net.estimateSinglePose(video, {
-        flipHorizontal: false
-      });
+      const pose = await net.estimateSinglePose(video, { flipHorizontal: false });
 
+      // Clear canvas and draw detected keypoints
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-
       pose.keypoints.forEach(point => {
         if (point.score > 0.5) {
           ctx.beginPath();
@@ -68,6 +87,7 @@
         }
       });
 
+      // Draw skeleton lines
       const adjacentKeyPoints = posenet.getAdjacentKeyPoints(pose.keypoints, 0.5);
       adjacentKeyPoints.forEach(([from, to]) => {
         ctx.beginPath();
@@ -81,10 +101,60 @@
       requestAnimationFrame(() => detectPose(net));
     }
 
+    // Detect the breath using Web Audio API
+    let audioContext;
+    let analyser;
+    let bufferLength;
+    let dataArray;
+    let breathDetected = false;
+
+    async function setupBreathDetection() {
+      audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      analyser = audioContext.createAnalyser();
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const source = audioContext.createMediaStreamSource(stream);
+      source.connect(analyser);
+
+      analyser.fftSize = 256;
+      bufferLength = analyser.frequencyBinCount;
+      dataArray = new Uint8Array(bufferLength);
+
+      // Monitor the volume to detect breath
+      function detectVolume() {
+        analyser.getByteFrequencyData(dataArray);
+        let sum = 0;
+        for (let i = 0; i < bufferLength; i++) {
+          sum += dataArray[i];
+        }
+        let average = sum / bufferLength;
+
+        // If average volume exceeds threshold, consider it as a breath
+        if (average > 40) {
+          if (!breathDetected) {
+            breathDetected = true;
+            document.getElementById('breathStatus').textContent = "Breath detected: Yes";
+            document.getElementById('breathStatus').style.color = "green";
+          }
+        } else {
+          if (breathDetected) {
+            breathDetected = false;
+            document.getElementById('breathStatus').textContent = "Breath detected: No";
+            document.getElementById('breathStatus').style.color = "red";
+          }
+        }
+        
+        requestAnimationFrame(detectVolume);
+      }
+
+      detectVolume();
+    }
+
+    // Initialize camera, pose detection, and breath detection
     async function init() {
       const video = await setupCamera();
       const net = await loadPoseNet();
       detectPose(net);
+      setupBreathDetection();
     }
 
     init();
