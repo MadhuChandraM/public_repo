@@ -5,18 +5,16 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Body Movement Detection</title>
   <style>
-    /* Styling for the webpage */
+    /* Basic styling */
     body {
       font-family: Arial, sans-serif;
       text-align: center;
       background-color: #f4f4f9;
     }
-
     #video {
       border: 2px solid black;
       margin-top: 20px;
     }
-
     canvas {
       position: absolute;
       top: 0;
@@ -27,8 +25,7 @@
 </head>
 <body>
 
-  <h1>Body Movement Detection via Webcam</h1>
-
+  <h1>Body Movement Detection using Webcam</h1>
   <p>Allow access to your webcam for detecting body movements.</p>
   <video id="video" width="640" height="480" autoplay></video>
   <canvas id="canvas" width="640" height="480"></canvas>
@@ -37,28 +34,20 @@
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/posenet"></script>
 
   <script>
-    // Access webcam stream
     async function setupCamera() {
       const video = document.getElementById('video');
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: true
-      });
-
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
       video.srcObject = stream;
       return new Promise((resolve) => {
-        video.onloadedmetadata = () => {
-          resolve(video);
-        };
+        video.onloadedmetadata = () => resolve(video);
       });
     }
 
-    // Load PoseNet model
     async function loadPoseNet() {
       const net = await posenet.load();
       return net;
     }
 
-    // Detect poses from the video stream
     async function detectPose(net) {
       const video = document.getElementById('video');
       const canvas = document.getElementById('canvas');
@@ -68,10 +57,8 @@
         flipHorizontal: false
       });
 
-      // Clear the canvas
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      // Draw keypoints
       pose.keypoints.forEach(point => {
         if (point.score > 0.5) {
           ctx.beginPath();
@@ -81,7 +68,6 @@
         }
       });
 
-      // Optionally, draw skeleton lines between keypoints
       const adjacentKeyPoints = posenet.getAdjacentKeyPoints(pose.keypoints, 0.5);
       adjacentKeyPoints.forEach(([from, to]) => {
         ctx.beginPath();
@@ -92,18 +78,15 @@
         ctx.stroke();
       });
 
-      // Call again for the next frame
       requestAnimationFrame(() => detectPose(net));
     }
 
-    // Initialize everything
     async function init() {
       const video = await setupCamera();
       const net = await loadPoseNet();
       detectPose(net);
     }
 
-    // Start the process
     init();
   </script>
 </body>
